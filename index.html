@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f5f8fd" />
+    <title>Построение кубов и кубоидов в тетради в клетку · 5 класс (1 ед. = 2 кл.)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body data-theme="light">
+    <!-- Mobile Backdrop for Drawers -->
+    <div id="mobile-backdrop" class="mobile-backdrop hidden"></div>
+
+    <!-- Top Floating Header -->
+    <header id="top-bar" class="top-bar glass-panel">
+      <div class="brand">
+        <button id="btn-mobile-menu" class="icon-pill mobile-only" title="Список уроков и задач" aria-label="Меню">
+          <span>☰</span>
+        </button>
+        <div class="brand-badge">
+          <span class="brand-icon">📓</span>
+          <div class="brand-text">
+            <div class="brand-title">Тетрадь в клетку</div>
+            <div class="brand-sub">1 ед. = 2 клетки</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="section-tabs" aria-label="Разделы урока">
+        <button id="tab-tutorial" class="section-tab active" data-tab="tutorial">
+          <span class="tab-dot" style="background:#6366f1"></span>
+          <span>🎓 Обучение</span>
+        </button>
+        <button id="tab-tasks" class="section-tab" data-tab="tasks">
+          <span class="tab-dot" style="background:#10b981"></span>
+          <span>📝 30 задач</span>
+        </button>
+        <button id="tab-random" class="section-tab" data-tab="random">
+          <span class="tab-dot" style="background:#f59e0b"></span>
+          <span>🎲 Случайная</span>
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <button id="btn-mobile-info" class="icon-pill mobile-only" title="Условие задачи и подсказки">
+          <span>📋</span>
+        </button>
+        <button id="btn-theme" class="icon-pill" title="Светлая тетрадь / Тёмный чертёж">
+          <span id="theme-icon">🌙</span><span class="btn-label" id="theme-label">Чертёж</span>
+        </button>
+        <button id="btn-zen" class="icon-pill desktop-only" title="Режим чистой доски (Z)">
+          <span>📺</span><span class="btn-label">Доска</span>
+        </button>
+        <button id="btn-fullscreen" class="icon-pill icon-only desktop-only" title="На весь экран (F)" aria-label="На весь экран">
+          ⛶
+        </button>
+      </div>
+    </header>
+
+    <!-- Floating Clean-Board Zen Toolbar -->
+    <div id="zen-bar" class="zen-bar glass-panel hidden">
+      <button id="btn-exit-zen" class="zen-btn" title="Вернуть панели (Z)">☰ Панели</button>
+      <div class="bar-sep"></div>
+      <button id="zen-prev" class="zen-btn" title="Назад (←)">←</button>
+      <button id="zen-next" class="zen-btn" title="Далее (→)">→</button>
+      <div class="bar-sep"></div>
+      <button id="zen-play" class="zen-btn primary" title="Пошаговое построение">▶ Пошагово</button>
+      <button id="zen-answer" class="zen-btn answer-toggle-btn" title="Показать или скрыть чертёж (Enter)">👁 Ответ</button>
+    </div>
+
+    <!-- Left Collapsible Rail: Tutorial Lessons OR 30 Tasks -->
+    <aside id="left-rail" class="left-rail glass-panel">
+      <div class="rail-header">
+        <div>
+          <div id="rail-badge" class="page-pill">Обучение</div>
+          <div id="rail-title" class="rail-title">Как строить в тетради</div>
+        </div>
+        <button id="btn-toggle-left" class="collapse-btn" title="Свернуть список">‹</button>
+      </div>
+
+      <!-- Filter bar for the 30 tasks (hidden in tutorial mode) -->
+      <div id="task-filter-bar" class="task-filter-bar hidden">
+        <button class="filter-chip active" data-filter="all">Все 30</button>
+        <button class="filter-chip" data-filter="easy">1–10</button>
+        <button class="filter-chip" data-filter="medium">11–20</button>
+        <button class="filter-chip" data-filter="hard">21–30</button>
+      </div>
+
+      <div id="item-list" class="item-list"></div>
+
+      <div class="rail-footer">
+        <button id="btn-prev" class="nav-step-btn" title="Предыдущее (←)">← Назад</button>
+        <button id="btn-next" class="nav-step-btn primary" title="Следующее (→)">Далее →</button>
+      </div>
+    </aside>
+
+    <!-- Left Restore Handle -->
+    <button id="btn-open-left" class="side-restore left glass-panel hidden" title="Открыть список">
+      <span>›</span>
+      <span class="restore-text">Задачи</span>
+    </button>
+
+    <!-- Center Full-Board Squared Notebook Sheet -->
+    <main id="notebook-stage" class="notebook-stage" aria-label="Тетрадный лист в клетку"></main>
+
+    <!-- Right Collapsible Task & Explanation Panel -->
+    <aside id="right-panel" class="right-panel glass-panel">
+      <div class="panel-header">
+        <span id="panel-badge" class="page-pill">Урок 1 из 5</span>
+        <button id="btn-toggle-right" class="collapse-btn" title="Свернуть карточку">›</button>
+      </div>
+      <div id="right-body" class="panel-body"></div>
+    </aside>
+
+    <!-- Right Restore Handle -->
+    <button id="btn-open-right" class="side-restore right glass-panel hidden" title="Открыть задание">
+      <span class="restore-text">Задание</span>
+      <span>‹</span>
+    </button>
+
+    <!-- Bottom Floating Studio Dock -->
+    <footer id="bottom-dock" class="bottom-dock glass-panel">
+      <div class="dock-group">
+        <span class="dock-label">Пошагово в тетради</span>
+        <div class="dock-buttons">
+          <button id="btn-play" class="dock-btn play-btn" title="Запустить пошаговое объяснение (Пробел)">▶ Пошагово</button>
+          <button class="dock-btn step-btn" data-step="0" title="Чистый лист">0</button>
+          <button class="dock-btn step-btn" data-step="1" title="Шаг 1: передняя грань">1</button>
+          <button class="dock-btn step-btn" data-step="2" title="Шаг 2: ширина по диагоналям">2</button>
+          <button class="dock-btn step-btn" data-step="3" title="Шаг 3: задние рёбра">3</button>
+          <button class="dock-btn step-btn" data-step="4" title="Шаг 4: невидимые пунктиром">4</button>
+          <button class="dock-btn step-btn" data-step="5" title="Шаг 5: готовый чертёж">5</button>
+        </div>
+      </div>
+
+      <div class="dock-divider"></div>
+
+      <div class="dock-group">
+        <span class="dock-label">Карандаш и сетка</span>
+        <div class="dock-buttons">
+          <button id="btn-draw" class="dock-btn" title="Рисовать по узлам клеток с линейкой">✏️ Рисовать</button>
+          <button id="btn-dash-pen" class="dock-btn hidden" title="Переключить: сплошная / пунктирная линия">┄ Пунктир</button>
+          <button id="btn-undo" class="dock-btn hidden" title="Отменить последнюю линию">↩️</button>
+          <button id="btn-clear" class="dock-btn hidden" title="Стереть свой чертёж">🗑</button>
+          <button id="btn-dims" class="dock-btn active" title="Подписи Длина · Ширина · Высота">📏 Д·Ш·В</button>
+          <button id="btn-hidden" class="dock-btn active" title="Невидимые задние рёбра пунктиром">┄ Рёбра</button>
+        </div>
+      </div>
+
+      <div class="dock-divider"></div>
+
+      <div class="dock-group">
+        <span class="dock-label">Проверка</span>
+        <div class="dock-buttons">
+          <button id="btn-answer" class="dock-btn dock-btn-answer answer-toggle-btn" title="Показать или скрыть ответ (Enter)">👁 Ответ</button>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
