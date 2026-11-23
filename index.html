@@ -111,6 +111,9 @@
     <!-- Center Full-Board Squared Notebook Sheet -->
     <main id="notebook-stage" class="notebook-stage" aria-label="Тетрадный лист в клетку"></main>
 
+    <!-- Full-Board 30-Tasks Wall (ALL 30 tasks visible at once with ZERO scrolling!) -->
+    <section id="tasks-board" class="tasks-board hidden" aria-label="Все 30 задач на весь экран"></section>
+
     <!-- Right Collapsible Task & Explanation Panel -->
     <aside id="right-panel" class="right-panel glass-panel">
       <div class="panel-header">
@@ -160,6 +163,7 @@
       <div class="dock-group">
         <span class="dock-label">Проверка</span>
         <div class="dock-buttons">
+          <button id="btn-back-board" class="dock-btn hidden" title="Вернуться ко всем 30 задачам на весь экран">⊞ Все 30</button>
           <button id="btn-answer" class="dock-btn dock-btn-answer answer-toggle-btn" title="Показать или скрыть ответ (Enter)">👁 Ответ</button>
         </div>
       </div>

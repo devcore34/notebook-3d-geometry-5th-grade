@@ -20,6 +20,7 @@ if (
 // ==================== APP STATE ====================
 const state = {
   tab: 'tutorial', // 'tutorial' | 'tasks' | 'random'
+  showTasksBoard: false, // When true, ALL 30 tasks fill the entire board at once (zero scrolling!)
   taskFilter: 'all', // 'all' | 'easy' | 'medium' | 'hard'
   itemId: TUTORIAL_ITEMS[0].id,
   randomItem: generateRandomNotebookTask(),
@@ -45,6 +46,8 @@ const state = {
 // ==================== DOM ELEMENTS ====================
 const topBarEl = document.getElementById('top-bar');
 const stageEl = document.getElementById('notebook-stage');
+const tasksBoardEl = document.getElementById('tasks-board');
+const btnBackBoard = document.getElementById('btn-back-board');
 const leftRailEl = document.getElementById('left-rail');
 const rightPanelEl = document.getElementById('right-panel');
 const btnOpenLeft = document.getElementById('btn-open-left');
@@ -123,16 +126,30 @@ function selectTab(tab) {
   stopPlayTimer();
   state.tab = tab;
   if (tab === 'tutorial') {
+    state.showTasksBoard = false;
     selectItem(TUTORIAL_ITEMS[0].id);
   } else if (tab === 'tasks') {
-    selectItem(PRACTICE_TASKS[0].id);
+    // Open ALL 30 tasks across the entire board immediately — zero scrolling!
+    state.showTasksBoard = true;
+    closeMobileDrawers();
+    renderAll();
   } else if (tab === 'random') {
+    state.showTasksBoard = false;
     selectItem(state.randomItem.id);
   }
 }
 
+function openTasksBoard() {
+  stopPlayTimer();
+  state.tab = 'tasks';
+  state.showTasksBoard = true;
+  closeMobileDrawers();
+  renderAll();
+}
+
 function selectItem(id) {
   stopPlayTimer();
+  state.showTasksBoard = false;
   state.itemId = id;
   state.highlightDim = null;
   state.drawMode = false;
@@ -251,12 +268,70 @@ function toggleDrawMode() {
 
 // ==================== RENDERING ====================
 function renderAll() {
+  document.body.classList.toggle('board-open', state.showTasksBoard);
+  tasksBoardEl.classList.toggle('hidden', !state.showTasksBoard);
+
   renderTopTabs();
-  renderLeftRail();
-  renderStage();
-  renderRightPanel();
-  renderDock();
+  if (state.showTasksBoard) {
+    renderTasksBoard();
+  } else {
+    renderLeftRail();
+    renderStage();
+    renderRightPanel();
+    renderDock();
+  }
   requestAnimationFrame(updateSafeInsets);
+}
+
+function renderTasksBoard() {
+  tasksBoardEl.innerHTML = `
+    <div class="tasks-board-head">
+      <div class="tasks-board-title">
+        <span>📝 Все 30 задач для тетради в клетку (нажми на любую задачу, чтобы открыть чертёж)</span>
+      </div>
+      <div class="tasks-board-legend">
+        <span class="legend-pill is-l">↗ Длина (2→ 1↑)</span>
+        <span class="legend-pill is-w">↘ Ширина (2→ 1↓)</span>
+        <span class="legend-pill is-h">↓ Высота (2 кл.)</span>
+      </div>
+    </div>
+    <div class="tasks-board-grid">
+      ${PRACTICE_TASKS.map((t) => {
+        const isRev = state.revealed.has(t.id);
+        return `
+          <button class="tb-card is-${t.level} ${isRev ? 'is-done' : ''}" data-open-task="${t.id}" title="Открыть задачу № ${t.num} на тетрадном листе">
+            <div class="tb-card-head">
+              <span class="tb-num">
+                <span class="tb-num-badge">№ ${t.num}</span>
+                <span>${t.isCube ? 'Куб' : 'Кубоид'}</span>
+              </span>
+              ${isRev ? '<span class="tb-check">✓</span>' : ''}
+            </div>
+            <div class="tb-dims">
+              <div class="tb-dim is-l">
+                <span class="tb-dim-lbl">↗ Длина</span>
+                <span class="tb-dim-val">${t.L} ед.</span>
+              </div>
+              <div class="tb-dim is-w">
+                <span class="tb-dim-lbl">↘ Ширина</span>
+                <span class="tb-dim-val">${t.W} ед.</span>
+              </div>
+              <div class="tb-dim is-h">
+                <span class="tb-dim-lbl">↕ Высота</span>
+                <span class="tb-dim-val">${t.H} ед.</span>
+              </div>
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  tasksBoardEl.querySelectorAll('[data-open-task]').forEach((card) => {
+    card.addEventListener('click', () => {
+      selectItem(card.dataset.openTask);
+    });
+  });
 }
 
 function renderTopTabs() {
@@ -498,6 +573,7 @@ function renderDock() {
 
   btnDims.classList.toggle('active', state.showDimLabels);
   btnHidden.classList.toggle('active', state.showHidden);
+  btnBackBoard?.classList.toggle('hidden', state.tab !== 'tasks');
 
   [btnAnswer, zenAnswerBtn].forEach((b) => {
     b.classList.toggle('is-revealed', isRev);
@@ -535,6 +611,7 @@ function updateSafeInsets() {
   if (isMobileViewport()) {
     const rect = topBarEl?.getBoundingClientRect();
     top = Math.ceil((rect ? rect.bottom : 112) + 8);
+    document.documentElement.style.setProperty('--mobile-top-offset', `${top}px`);
     left = 8;
     right = 8;
     bottom = 78;
@@ -614,6 +691,7 @@ btnHidden.addEventListener('click', () => {
 });
 btnAnswer.addEventListener('click', toggleAnswer);
 zenAnswerBtn.addEventListener('click', toggleAnswer);
+btnBackBoard?.addEventListener('click', openTasksBoard);
 
 // Theme
 btnTheme.addEventListener('click', () => {
@@ -701,6 +779,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'Escape') {
     if (state.drawMode) toggleDrawMode();
     else if (state.zen) toggleZen(false);
+    else if (state.tab === 'tasks' && !state.showTasksBoard) openTasksBoard();
   }
 });
 
