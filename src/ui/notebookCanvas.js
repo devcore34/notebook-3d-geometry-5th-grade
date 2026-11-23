@@ -1,16 +1,17 @@
-// Реалистичный интерактивный тетрадный лист в клетку (масштаб: 1 единица = 2 клетки!)
-// 🔵 Длина (L): горизонтально вправо (1 ед. = 2 кл.)
-// 🟠 Ширина (W): вглубь вправо-вверх по диагонали клеток (1 ед. = 1 диагональ: +1 кл. →, +1 кл. ↑)
-// 🟢 Высота (H): вертикально вверх/вниз (1 ед. = 2 кл.)
-import { CELLS_PER_UNIT, PALETTES, pluralDiags } from '../data/tasks.js';
+// Изометрическое построение на школьном тетрадном листе в клетку (масштаб: 1 единица = 2 клетки!)
+// 🔵 ↗ Длина (L): 1 ед. = 2 клетки вправо и 1 клетка вверх  (dx = +2, dy = -1)
+// 🟠 ↘ Ширина (W): 1 ед. = 2 клетки вправо и 1 клетка вниз  (dx = +2, dy = +1)
+// 🟢 ↓ Высота (H): 1 ед. = 2 клетки строго вниз             (dx =  0, dy = +2)
+// Каждая вершина попадает СТРОГО в пересечение клеток тетради!
+import { PALETTES } from '../data/tasks.js';
 
 export const STEP_CAPTIONS = [
-  'Чистый тетрадный лист. Сначала переведи единицы в клетки (1 ед. = 2 кл.), попробуй начертить сам или нажми «▶ Пошагово»!',
-  'Шаг 1 из 5: Рисуем переднюю грань по клеткам — отсчитываем 🔵 Длину (по 2 кл. за ед.) и 🟢 Высоту (по 2 кл. за ед.).',
-  'Шаг 2 из 5: Из трёх видимых углов проводим 🟠 Ширину (вглубь) — ровно по диагоналям клеток вправо-вверх (1 ед. = 1 диаг.).',
-  'Шаг 3 из 5: Соединяем задние верхнее и правое рёбра параллельно передней грани — видимый контур фигуры готов!',
-  'Шаг 4 из 5: Проводим 3 невидимых задних ребра аккуратным пунктиром — так фигура выглядит по-настоящему объёмной!',
-  'Шаг 5 из 5: Готово! Сверь свой чертёж в тетради с клетками на доске и проверь все три измерения.',
+  'Чистый тетрадный лист. 🔵 Длина ↗ (2 кл. →, 1 ↑), 🟠 Ширина ↘ (2 кл. →, 1 ↓), 🟢 Высота ↓ (2 кл. ↓). Нарисуй или жми «▶ Пошагово»!',
+  'Шаг 1 из 5: Рисуем верхнюю грань — от левой точки шагаем по 🔵 Длине ↗ (2→, 1↑) и по 🟠 Ширине ↘ (2→, 1↓), затем замыкаем верх!',
+  'Шаг 2 из 5: Из трёх видимых углов (левого, переднего и правого) опускаем 🟢 Высоту строго вниз по клеткам (1 ед. = 2 кл. ↓).',
+  'Шаг 3 из 5: Соединяем нижние концы параллельно 🟠 Ширине (↘) и 🔵 Длине (↗) — видимый контур фигуры готов!',
+  'Шаг 4 из 5: Проводим 3 невидимых задних ребра аккуратным пунктиром — теперь фигура прозрачная и объёмная!',
+  'Шаг 5 из 5: Готово! Сверь свой чертёж в тетради с клетками на доске. Нажми на 🔵 Длина / 🟠 Ширина / 🟢 Высота справа для подсветки!',
 ];
 
 export function getStepCaption(step) {
@@ -59,43 +60,49 @@ function buildNotebookSvg(item, options = {}) {
   const effStep = revealed ? step : 0;
 
   const { L, W, H } = item;
-  const cL = L * CELLS_PER_UNIT; // клетки по горизонтали
-  const cH = H * CELLS_PER_UNIT; // клетки по вертикали
-  const cW = W; // диагонали клеток вправо-вверх (+W кл. вправо, -W кл. вверх)
 
-  // Размер одной тетрадной клетки в координатах SVG
-  const S = 30;
+  // Размер одной клетки тетради (адаптивный, чтобы даже большой 5×3×4 отлично смотрелся!)
+  const spanCols = 2 * (L + W);
+  const spanRows = L + W + 2 * H;
+  const S = spanCols > 14 || spanRows > 14 ? 24 : 28;
 
-  // Размер тетрадного листа в клетках (динамический, с запасом 6 клеток слева под плашку «Высота»)
-  const figCols = cL + cW;
-  const figRows = cH + cW;
-  const cols = Math.max(19, figCols + 11);
-  const rows = Math.max(13, figRows + 7);
+  // Размер тетрадного листа в клетках (с удобным запасом слева/справа/сверху/снизу под плашки и красные поля!)
+  const padLeft = 5;
+  const padRight = 6;
+  const padTop = 3;
+  const padBottom = 4;
 
+  const cols = Math.max(18, spanCols + padLeft + padRight);
+  const rows = Math.max(14, spanRows + padTop + padBottom);
   const width = cols * S;
   const height = rows * S;
 
-  // Центрируем фигуру на тетрадном листе (учитывая 6 клеток слева под «Высоту» и 3 клетки красных полей справа!)
-  const marginColsRight = 3; // красное поле тетради справа (3 клетки)
+  // Центрируем фигуру на листе, оставляя 3 клетки справа под красные поля тетради
+  const marginColsRight = 3;
   const usableCols = cols - marginColsRight - 1;
-  const gx0 = Math.max(6, Math.floor(1 + (usableCols - figCols) / 2));
-  const gy0 = Math.min(rows - 3, Math.ceil((rows + figRows) / 2) + 0.5);
-  const baseRow = Math.round(gy0);
+  const gxL = Math.max(padLeft, Math.floor(1 + (usableCols - spanCols) / 2));
+  const gyTop = Math.max(padTop, Math.floor((rows - spanRows) / 2));
+  const gyL = gyTop + L; // левая вершина L0 ниже самой верхней вершины T на L клеток!
 
-  const pt = (gx, gy) => [gx * S, gy * S];
+  // Перевод координат (iw по Ширине ↘, il по Длине ↗, ih по Высоте ↓) строго в узлы клеток!
+  const gridCoord = (iw, il, ih) => [gxL + 2 * (iw + il), gyL + iw - il + 2 * ih];
+  const pt = (iw, il, ih) => {
+    const [gx, gy] = gridCoord(iw, il, ih);
+    return [gx * S, gy * S];
+  };
 
-  // 8 вершин фигуры строго на пересечениях клеток тетради!
-  const BL = pt(gx0, baseRow);
-  const BR = pt(gx0 + cL, baseRow);
-  const TL = pt(gx0, baseRow - cH);
-  const TR = pt(gx0 + cL, baseRow - cH);
+  // 8 вершин кубоида строго на узлах клеток тетради!
+  const L0 = pt(0, 0, 0); // левый верхний
+  const T0 = pt(0, L, 0); // самый верхний (задний)
+  const F0 = pt(W, 0, 0); // передний верхний
+  const R0 = pt(W, L, 0); // правый верхний
 
-  const BL2 = pt(gx0 + cW, baseRow - cW);
-  const BR2 = pt(gx0 + cL + cW, baseRow - cW);
-  const TL2 = pt(gx0 + cW, baseRow - cH - cW);
-  const TR2 = pt(gx0 + cL + cW, baseRow - cH - cW);
+  const Lb = pt(0, 0, H); // левый нижний
+  const Tb = pt(0, L, H); // задний нижний (невидимый)
+  const Fb = pt(W, 0, H); // передний нижний
+  const Rb = pt(W, L, H); // правый нижний
 
-  // 1) Реалистичный фон тетрадного листа в клетку + красные поля + переплёт
+  // 1) Фон школьного тетрадного листа в клетку + красная линия полей + отверстия переплёта
   const paperBg = isDark ? '#091a33' : '#fdfefe';
   const gridLineColor = isDark ? 'rgba(96, 165, 250, 0.22)' : '#bfd9f2';
   const gridMajorColor = isDark ? 'rgba(96, 165, 250, 0.34)' : '#9ec5ea';
@@ -108,25 +115,22 @@ function buildNotebookSvg(item, options = {}) {
     const x = c * S;
     const isMajor = c % 2 === 0;
     gridLines.push(
-      `<line x1="${x}" y1="0" x2="${x}" y2="${height}" stroke="${isMajor ? gridMajorColor : gridLineColor}" stroke-width="${isMajor ? 1.15 : 0.9}"/>`
+      `<line x1="${x}" y1="0" x2="${x}" y2="${height}" stroke="${isMajor ? gridMajorColor : gridLineColor}" stroke-width="${isMajor ? 1.1 : 0.85}"/>`
     );
   }
   for (let r = 1; r < rows; r++) {
     const y = r * S;
     const isMajor = r % 2 === 0;
     gridLines.push(
-      `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${isMajor ? gridMajorColor : gridLineColor}" stroke-width="${isMajor ? 1.15 : 0.9}"/>`
+      `<line x1="0" y1="${y}" x2="${width}" y2="${y}" stroke="${isMajor ? gridMajorColor : gridLineColor}" stroke-width="${isMajor ? 1.1 : 0.85}"/>`
     );
   }
 
-  // Красная линия полей тетради справа (отступ 3 клетки)
   const marginX = (cols - marginColsRight) * S;
-
-  // Отверстия тетради слева для аутентичного вида тетрадного листа
   const holes = [];
   for (let r = 2; r < rows - 1; r += 3) {
     holes.push(
-      `<circle cx="${S * 0.48}" cy="${r * S}" r="5.5" fill="${holeFill}" stroke="${gridMajorColor}" stroke-width="1"/>`
+      `<circle cx="${S * 0.48}" cy="${r * S}" r="5.2" fill="${holeFill}" stroke="${gridMajorColor}" stroke-width="1"/>`
     );
   }
 
@@ -145,40 +149,37 @@ function buildNotebookSvg(item, options = {}) {
   // 2) Полупрозрачная заливка граней (Шаг 5) — чтобы клетки тетради красиво просвечивали!
   let facesSvg = '';
   if (effStep >= 5) {
-    const op = isDark ? 0.34 : 0.42;
+    const op = isDark ? 0.36 : 0.44;
     facesSvg = `
       <g class="nb-faces" opacity="${op}">
-        <polygon points="${fmt([TL, TL2, TR2, TR])}" fill="${pal.top}"/>
-        <polygon points="${fmt([BL, BR, TR, TL])}" fill="${pal.front}"/>
-        <polygon points="${fmt([BR, BR2, TR2, TR])}" fill="${pal.right}"/>
+        <polygon points="${fmt([L0, T0, R0, F0])}" fill="${pal.top}"/>
+        <polygon points="${fmt([L0, F0, Fb, Lb])}" fill="${pal.front}"/>
+        <polygon points="${fmt([F0, R0, Rb, Fb])}" fill="${pal.right}"/>
       </g>
     `;
   }
 
-  // 3) Вспомогательные метки подсчёта клеток на активных шагах (1 ед. = 2 кл.!)
+  // 3) Наглядные "лесенки по клеткам" (2→, 1↑ и 2→, 1↓) + пронумерованные кружки шагов на активном шаге!
   let stepGuidesSvg = '';
-  const drawCellHops = (x0, y0, dx, dy, count, color, ox, oy, labelPrefix = '') => {
-    let out = '';
-    for (let k = 0; k < count; k++) {
-      const mx = (x0 + dx * (k + 0.5)) * S + ox;
-      const my = (y0 + dy * (k + 0.5)) * S + oy;
-      // Маленький аккуратный номер каждой клетки или диагонали
-      const r = count > 8 ? 7.8 : 9;
-      out += `
-        <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="${r}" fill="${color}" opacity="0.93"/>
-        <text x="${mx.toFixed(1)}" y="${(my + 3.4).toFixed(1)}" text-anchor="middle" fill="#ffffff" font-size="${count > 8 ? 9.5 : 10.5}" font-weight="800" font-family="JetBrains Mono, monospace">${labelPrefix}${k + 1}</text>
-      `;
-    }
-    return out;
-  };
 
-  // Подсветка клеток диагонали на Шаге 2 (чтобы 5-классник видел каждую пройденную клетку по диагонали!)
-  const drawDiagHighlight = (startGx, startGy, count) => {
+  const drawIsoStepStairs = (startIw, startIl, startIh, dIw, dIl, dIh, count, color, badgeOffX, badgeOffY) => {
     let out = '';
     for (let k = 0; k < count; k++) {
-      const cx = (startGx + k) * S;
-      const cy = (startGy - k - 1) * S;
-      out += `<rect x="${cx}" y="${cy}" width="${S}" height="${S}" fill="${dimPal.width.stroke}" fill-opacity="0.13" stroke="${dimPal.width.stroke}" stroke-width="1" stroke-dasharray="3 2" stroke-opacity="0.45"/>`;
+      const p0 = pt(startIw + dIw * k, startIl + dIl * k, startIh + dIh * k);
+      const p1 = pt(startIw + dIw * (k + 1), startIl + dIl * (k + 1), startIh + dIh * (k + 1));
+
+      // Рисуем тонкую пунктирную "лесенку" по клеткам (2 вправо, 1 вверх/вниз) для Длины и Ширины!
+      if (dIh === 0) {
+        const corner = [p1[0], p0[1]];
+        out += `<polyline points="${p0[0]},${p0[1]} ${corner[0]},${corner[1]} ${p1[0]},${p1[1]}" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="3 3" stroke-opacity="0.72"/>`;
+      }
+
+      const mx = (p0[0] + p1[0]) / 2 + badgeOffX;
+      const my = (p0[1] + p1[1]) / 2 + badgeOffY;
+      out += `
+        <circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="9.5" fill="${color}" opacity="0.95"/>
+        <text x="${mx.toFixed(1)}" y="${(my + 3.5).toFixed(1)}" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="800" font-family="JetBrains Mono, monospace">${k + 1}</text>
+      `;
     }
     return out;
   };
@@ -192,54 +193,50 @@ function buildNotebookSvg(item, options = {}) {
   let edgesSvg = '';
   let hiddenSvg = '';
 
-  // Шаг 1: Передняя грань (Длина + Высота)
+  // Шаг 1: Верхняя грань (🔵 Длина ↗ и 🟠 Ширина ↘)
   if (effStep >= 1) {
     const isNew = effStep === 1;
     edgesSvg += `
-      ${lineEl(BL, BR, mkEdge(isNew, dimPal.length.stroke))}
-      ${lineEl(TL, TR, mkEdge(isNew, dimPal.length.stroke))}
-      ${lineEl(BL, TL, mkEdge(isNew, dimPal.height.stroke))}
-      ${lineEl(BR, TR, mkEdge(isNew, dimPal.height.stroke))}
+      ${lineEl(L0, T0, mkEdge(isNew, dimPal.length.stroke))}
+      ${lineEl(F0, R0, mkEdge(isNew, dimPal.length.stroke))}
+      ${lineEl(L0, F0, mkEdge(isNew, dimPal.width.stroke))}
+      ${lineEl(T0, R0, mkEdge(isNew, dimPal.width.stroke))}
     `;
     if (isNew && showCellTicks) {
-      stepGuidesSvg += drawCellHops(gx0, baseRow, 1, 0, cL, dimPal.length.stroke, 0, 14);
-      stepGuidesSvg += drawCellHops(gx0, baseRow, 0, -1, cH, dimPal.height.stroke, -15, 0);
-      [BL, BR, TL, TR].forEach((p) => {
+      stepGuidesSvg += drawIsoStepStairs(0, 0, 0, 0, 1, 0, L, dimPal.length.stroke, -11, -13);
+      stepGuidesSvg += drawIsoStepStairs(0, 0, 0, 1, 0, 0, W, dimPal.width.stroke, -11, 14);
+      [L0, T0, R0, F0].forEach((p) => {
         stepGuidesSvg += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${baseStroke}"/>`;
       });
     }
   }
 
-  // Шаг 2: Три видимых ребра глубины (Ширина по диагоналям клеток ↗)
+  // Шаг 2: 3 вертикальных ребра 🟢 Высоты строго вниз по клеткам (1 ед. = 2 кл. ↓)
   if (effStep >= 2) {
     const isNew = effStep === 2;
-    if (isNew && showCellTicks) {
-      stepGuidesSvg += drawDiagHighlight(gx0, baseRow - cH, cW);
-      stepGuidesSvg += drawDiagHighlight(gx0 + cL, baseRow, cW);
-    }
     edgesSvg += `
-      ${lineEl(TL, TL2, mkEdge(isNew, dimPal.width.stroke))}
-      ${lineEl(TR, TR2, mkEdge(isNew, dimPal.width.stroke))}
-      ${lineEl(BR, BR2, mkEdge(isNew, dimPal.width.stroke))}
+      ${lineEl(L0, Lb, mkEdge(isNew, dimPal.height.stroke))}
+      ${lineEl(F0, Fb, mkEdge(isNew, dimPal.height.stroke))}
+      ${lineEl(R0, Rb, mkEdge(isNew, dimPal.height.stroke))}
     `;
     if (isNew && showCellTicks) {
-      stepGuidesSvg += drawCellHops(gx0 + cL, baseRow, 1, -1, cW, dimPal.width.stroke, 14, 10);
-      [TL2, TR2, BR2].forEach((p) => {
-        stepGuidesSvg += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${dimPal.width.stroke}"/>`;
+      stepGuidesSvg += drawIsoStepStairs(0, 0, 0, 0, 0, 1, H, dimPal.height.stroke, -18, 0);
+      [Lb, Fb, Rb].forEach((p) => {
+        stepGuidesSvg += `<circle cx="${p[0]}" cy="${p[1]}" r="4.5" fill="${dimPal.height.stroke}"/>`;
       });
     }
   }
 
-  // Шаг 3: Задние видимые рёбра (верх и право)
+  // Шаг 3: Замыкаем нижние видимые рёбра (🟠 Ширина ↘ и 🔵 Длина ↗)
   if (effStep >= 3) {
     const isNew = effStep === 3;
     edgesSvg += `
-      ${lineEl(TL2, TR2, mkEdge(isNew, dimPal.length.stroke))}
-      ${lineEl(BR2, TR2, mkEdge(isNew, dimPal.height.stroke))}
+      ${lineEl(Lb, Fb, mkEdge(isNew, dimPal.width.stroke))}
+      ${lineEl(Fb, Rb, mkEdge(isNew, dimPal.length.stroke))}
     `;
     if (isNew && showCellTicks) {
-      stepGuidesSvg += drawCellHops(gx0 + cW, baseRow - cH - cW, 1, 0, cL, dimPal.length.stroke, 0, -14);
-      stepGuidesSvg += drawCellHops(gx0 + cL + cW, baseRow - cW, 0, -1, cH, dimPal.height.stroke, 15, 0);
+      stepGuidesSvg += drawIsoStepStairs(0, 0, H, 1, 0, 0, W, dimPal.width.stroke, -10, 15);
+      stepGuidesSvg += drawIsoStepStairs(W, 0, H, 0, 1, 0, L, dimPal.length.stroke, 12, 14);
     }
   }
 
@@ -247,14 +244,14 @@ function buildNotebookSvg(item, options = {}) {
   if (effStep >= 4 && (showHidden || effStep === 4)) {
     const isNew = effStep === 4;
     const hColor = isNew ? (isDark ? '#f472b6' : '#db2777') : baseStroke;
-    const hOp = isNew ? 0.92 : 0.52;
-    const hAttr = `stroke="${hColor}" stroke-width="${isNew ? 3.2 : 2.1}" stroke-dasharray="7 5" stroke-opacity="${hOp}" stroke-linecap="round"`;
+    const hOp = isNew ? 0.92 : 0.5;
+    const hAttr = `stroke="${hColor}" stroke-width="${isNew ? 3.2 : 2}" stroke-dasharray="7 5" stroke-opacity="${hOp}" stroke-linecap="round"`;
     hiddenSvg = `
       <g class="nb-hidden">
-        ${lineEl(BL, BL2, hAttr)}
-        ${lineEl(BL2, TL2, hAttr)}
-        ${lineEl(BL2, BR2, hAttr)}
-        ${isNew ? `<circle cx="${BL2[0]}" cy="${BL2[1]}" r="4.5" fill="${hColor}"/>` : ''}
+        ${lineEl(T0, Tb, hAttr)}
+        ${lineEl(Lb, Tb, hAttr)}
+        ${lineEl(Rb, Tb, hAttr)}
+        ${isNew ? `<circle cx="${Tb[0]}" cy="${Tb[1]}" r="4.5" fill="${hColor}"/>` : ''}
       </g>
     `;
   }
@@ -265,16 +262,16 @@ function buildNotebookSvg(item, options = {}) {
     const c = dimPal[highlightDim]?.stroke || dimPal.length.stroke;
     const pairs = [];
     if (highlightDim === 'length') {
-      pairs.push([BL, BR], [TL, TR]);
-      if (effStep >= 3) pairs.push([TL2, TR2]);
-      if (effStep >= 4 && showHidden) pairs.push([BL2, BR2]);
-    } else if (highlightDim === 'width' && effStep >= 2) {
-      pairs.push([TL, TL2], [TR, TR2], [BR, BR2]);
-      if (effStep >= 4 && showHidden) pairs.push([BL, BL2]);
-    } else if (highlightDim === 'height') {
-      pairs.push([BL, TL], [BR, TR]);
-      if (effStep >= 3) pairs.push([BR2, TR2]);
-      if (effStep >= 4 && showHidden) pairs.push([BL2, TL2]);
+      pairs.push([L0, T0], [F0, R0]);
+      if (effStep >= 3) pairs.push([Fb, Rb]);
+      if (effStep >= 4 && showHidden) pairs.push([Lb, Tb]);
+    } else if (highlightDim === 'width') {
+      pairs.push([L0, F0], [T0, R0]);
+      if (effStep >= 3) pairs.push([Lb, Fb]);
+      if (effStep >= 4 && showHidden) pairs.push([Tb, Rb]);
+    } else if (highlightDim === 'height' && effStep >= 2) {
+      pairs.push([L0, Lb], [F0, Fb], [R0, Rb]);
+      if (effStep >= 4 && showHidden) pairs.push([T0, Tb]);
     }
     highlightSvg = `<g class="nb-hl">${pairs
       .map(
@@ -285,7 +282,7 @@ function buildNotebookSvg(item, options = {}) {
       .join('')}</g>`;
   }
 
-  // 6) Цветные размерные стрелки и плашки (Длина / Ширина / Высота + перевод в клетки!)
+  // 6) Цветные размерные стрелки и плашки (🔵 Длина ↗, 🟠 Ширина ↘, 🟢 Высота ↕)
   let dimsSvg = '';
   const drawDimArrow = (p1, p2, nx, ny, dist, dimKey, text, anchor) => {
     const dp = dimPal[dimKey];
@@ -302,8 +299,8 @@ function buildNotebookSvg(item, options = {}) {
     const uy = dy / len;
     const px = -uy;
     const py = ux;
-    const ah = 7.5;
-    const aw = 4.2;
+    const ah = 7;
+    const aw = 4;
 
     const h1a = [a1[0] + ux * ah + px * aw, a1[1] + uy * ah + py * aw];
     const h1b = [a1[0] + ux * ah - px * aw, a1[1] + uy * ah - py * aw];
@@ -311,7 +308,7 @@ function buildNotebookSvg(item, options = {}) {
     const h2b = [a2[0] - ux * ah - px * aw, a2[1] - uy * ah - py * aw];
 
     const fs = 11.8;
-    const pillW = text.length * fs * 0.56 + 16;
+    const pillW = text.length * fs * 0.57 + 16;
     const pillH = fs + 10;
 
     const mx = (a1[0] + a2[0]) / 2 + nx * 16;
@@ -320,12 +317,11 @@ function buildNotebookSvg(item, options = {}) {
     let rx = mx - pillW / 2;
     if (anchor === 'end') rx = mx - pillW;
     else if (anchor === 'start') rx = mx;
-    // Не вылезать за границы SVG
     rx = Math.max(8, Math.min(width - pillW - 8, rx));
     const ry = Math.max(8, Math.min(height - pillH - 8, my - pillH / 2));
     const tx = rx + pillW / 2;
     const ty = ry + pillH / 2 + fs * 0.34;
-    const sw = isHl ? 3.2 : 2.2;
+    const sw = isHl ? 3.2 : 2.1;
 
     return `
       <g opacity="${op}">
@@ -341,27 +337,27 @@ function buildNotebookSvg(item, options = {}) {
   };
 
   if (showDimLabels && effStep >= 3) {
-    // 🔵 Длина — снизу под передней гранью
-    dimsSvg += drawDimArrow(BL, BR, 0, 1, 18, 'length', `Длина: ${L} ед. (${cL} кл.)`, 'middle');
-    // 🟢 Высота — слева от передней грани
-    dimsSvg += drawDimArrow(BL, TL, -1, 0, 18, 'height', `Высота: ${H} ед. (${cH} кл.)`, 'end');
-    // 🟠 Ширина — справа-снизу вдоль диагонали BR -> BR2
-    dimsSvg += drawDimArrow(BR, BR2, 0.707, 0.707, 18, 'width', `Ширина: ${W} ед. (${pluralDiags(W)})`, 'start');
+    // 🔵 Длина ↗ вдоль верхнего левого ребра L0 -> T0 (нормаль влево-вверх: -0.447, -0.894)
+    dimsSvg += drawDimArrow(L0, T0, -0.447, -0.894, 16, 'length', `Длина: ${L} ед.`, 'end');
+    // 🟠 Ширина ↘ вдоль нижнего левого ребра Lb -> Fb (нормаль влево-вниз: -0.447, +0.894)
+    dimsSvg += drawDimArrow(Lb, Fb, -0.447, 0.894, 16, 'width', `Ширина: ${W} ед.`, 'end');
+    // 🟢 Высота ↕ вдоль правого вертикального ребра R0 -> Rb (нормаль вправо: +1, 0)
+    dimsSvg += drawDimArrow(R0, Rb, 1, 0, 16, 'height', `Высота: ${H} ед. (${H * 2} кл.)`, 'start');
   }
 
-  // 7) Мини-компас направлений (точно как на 2-м скриншоте! Всегда на Шаге 0, а на уроках — в углу листа)
+  // 7) Мини-компас направлений — ТОЧНО КАК НА СКРИНШОТЕ ПОЛЬЗОВАТЕЛЯ!
+  // 🔵 ↗ Длина (2 кл. →, 1 ↑) · 🟠 ↘ Ширина (2 кл. →, 1 ↓) · 🟢 ↓ Выс. (2 кл. ↓)
   let compassSvg = '';
   if (effStep === 0 || showDimLabels) {
-    const cardW = 192;
+    const cardW = 196;
     const cardH = 88;
-    const cxCard = 24;
-    const cyCard = effStep === 0 ? height - cardH - 18 : 14;
-    const oxC = cxCard + 52;
-    const oyC = cyCard + 42;
-    const lenC = 32;
-    const pL = [oxC + lenC, oyC];
-    const pW = [oxC + lenC * 0.74, oyC - lenC * 0.74];
-    const pH = [oxC, oyC + lenC];
+    const cxCard = 22;
+    const cyCard = effStep === 0 ? height - cardH - 16 : 12;
+    const oxC = cxCard + 54;
+    const oyC = cyCard + 36;
+    const pLen = [oxC + 32, oyC - 16]; // точный наклон 2→, 1↑!
+    const pWid = [oxC + 32, oyC + 16]; // точный наклон 2→, 1↓!
+    const pHgt = [oxC, oyC + 32]; // строго вниз 2↓!
     const cBg = isDark ? 'rgba(9, 26, 51, 0.94)' : 'rgba(255, 255, 255, 0.96)';
     const cBorder = isDark ? 'rgba(148, 197, 255, 0.36)' : 'rgba(148, 163, 184, 0.5)';
     const cDot = isDark ? '#e2e8f0' : '#1e293b';
@@ -369,20 +365,20 @@ function buildNotebookSvg(item, options = {}) {
     compassSvg = `
       <g class="nb-compass">
         <rect x="${cxCard}" y="${cyCard}" width="${cardW}" height="${cardH}" rx="14" fill="${cBg}" stroke="${cBorder}" stroke-width="1.3"/>
-        <circle cx="${oxC}" cy="${oyC}" r="3.8" fill="${cDot}"/>
-        <line x1="${oxC}" y1="${oyC}" x2="${pL[0]}" y2="${pL[1]}" stroke="${dimPal.length.stroke}" stroke-width="2.8" stroke-linecap="round"/>
-        <line x1="${oxC}" y1="${oyC}" x2="${pW[0]}" y2="${pW[1]}" stroke="${dimPal.width.stroke}" stroke-width="2.8" stroke-linecap="round"/>
-        <line x1="${oxC}" y1="${oyC}" x2="${pH[0]}" y2="${pH[1]}" stroke="${dimPal.height.stroke}" stroke-width="2.8" stroke-linecap="round"/>
-        <text x="${pW[0] + 6}" y="${pW[1] + 2}" fill="${dimPal.width.text}" font-size="11.5" font-weight="800" font-family="Manrope, sans-serif">↗ Ширина (1 диаг.)</text>
-        <text x="${pL[0] + 6}" y="${pL[1] + 4}" fill="${dimPal.length.text}" font-size="11.5" font-weight="800" font-family="Manrope, sans-serif">→ Длина (2 кл.)</text>
-        <text x="${oxC - 7}" y="${pH[1] + 2}" text-anchor="end" fill="${dimPal.height.text}" font-size="11.5" font-weight="800" font-family="Manrope, sans-serif">↓ Выс.</text>
-        <text x="${oxC + 8}" y="${pH[1] + 2}" fill="${dimPal.height.text}" font-size="10.5" font-weight="700" font-family="Manrope, sans-serif">(2 кл.)</text>
+        <circle cx="${oxC}" cy="${oyC}" r="4" fill="${cDot}"/>
+        <line x1="${oxC}" y1="${oyC}" x2="${pLen[0]}" y2="${pLen[1]}" stroke="${dimPal.length.stroke}" stroke-width="2.8" stroke-linecap="round"/>
+        <line x1="${oxC}" y1="${oyC}" x2="${pWid[0]}" y2="${pWid[1]}" stroke="${dimPal.width.stroke}" stroke-width="2.8" stroke-linecap="round"/>
+        <line x1="${oxC}" y1="${oyC}" x2="${pHgt[0]}" y2="${pHgt[1]}" stroke="${dimPal.height.stroke}" stroke-width="2.8" stroke-linecap="round"/>
+        <text x="${pLen[0] + 6}" y="${pLen[1] + 4}" fill="${dimPal.length.text}" font-size="11.5" font-weight="800" font-family="Manrope, sans-serif">↗ Длина (2→ 1↑)</text>
+        <text x="${pWid[0] + 6}" y="${pWid[1] + 5}" fill="${dimPal.width.text}" font-size="11.5" font-weight="800" font-family="Manrope, sans-serif">↘ Ширина (2→ 1↓)</text>
+        <text x="${oxC - 7}" y="${pHgt[1] + 4}" text-anchor="end" fill="${dimPal.height.text}" font-size="11.5" font-weight="800" font-family="Manrope, sans-serif">↓ Выс.</text>
+        <text x="${oxC + 7}" y="${pHgt[1] + 4}" fill="${dimPal.height.text}" font-size="10.5" font-weight="700" font-family="Manrope, sans-serif">(2 кл.)</text>
       </g>
     `;
   }
 
   // Бейдж масштаба на правом поле тетради
-  const scaleTagColor = isDark ? 'rgba(148, 197, 255, 0.7)' : 'rgba(100, 116, 139, 0.85)';
+  const scaleTagColor = isDark ? 'rgba(148, 197, 255, 0.72)' : 'rgba(100, 116, 139, 0.85)';
   const scaleBadge = `
     <g class="nb-scale-tag">
       <text x="${width - 10}" y="22" text-anchor="end" fill="${scaleTagColor}" font-size="11.5" font-weight="800" font-family="JetBrains Mono, monospace">1 ед. = 2 кл.</text>
@@ -481,7 +477,7 @@ export class NotebookSheetController {
     });
 
     const bannerText = this.drawMode
-      ? `✏️ Режим карандаша (${this.drawDashed ? 'пунктир' : 'сплошная'}): тяни от узла к узлу клетки — подскажем длину в клетках!`
+      ? `✏️ Режим карандаша (${this.drawDashed ? 'пунктир' : 'сплошная'}): тяни от узла к узлу клетки — подскажем длину в единицах!`
       : getStepCaption(effStep);
 
     this.container.innerHTML = `
@@ -507,7 +503,6 @@ export class NotebookSheetController {
     const previewLayer = svg.querySelector('.nb-preview-layer');
     if (!previewLayer) return;
 
-    // Pre-allocated SVG preview elements -> 0 DOM parsing on 120Hz touch whiteboards!
     const NS = 'http://www.w3.org/2000/svg';
     const previewLine = document.createElementNS(NS, 'line');
     previewLine.setAttribute('stroke', this.drawDashed ? '#db2777' : '#e11d48');
@@ -531,7 +526,7 @@ export class NotebookSheetController {
     const rulerBg = document.createElementNS(NS, 'rect');
     rulerBg.setAttribute('rx', '8');
     rulerBg.setAttribute('fill', '#0f172a');
-    rulerBg.setAttribute('fill-opacity', '0.9');
+    rulerBg.setAttribute('fill-opacity', '0.92');
     rulerBg.style.display = 'none';
 
     const rulerTxt = document.createElementNS(NS, 'text');
@@ -606,20 +601,20 @@ export class NotebookSheetController {
         previewLine.setAttribute('y2', cDot.y);
         previewLine.style.display = '';
 
-        // Живая подсказка длины линии в клетках и единицах!
-        const dgx = Math.abs(cDot.gx - sDot.gx);
-        const dgy = Math.abs(cDot.gy - sDot.gy);
+        // Умная живая линейка: распознаёт ↗ Длину (2→, 1↑), ↘ Ширину (2→, 1↓) и ↓ Высоту (2↓)!
+        const dx = cDot.gx - sDot.gx;
+        const dy = cDot.gy - sDot.gy;
+        const adx = Math.abs(dx);
+        const ady = Math.abs(dy);
         let label = '';
-        if (dgy === 0) {
-          const u = dgx / CELLS_PER_UNIT;
-          label = `${dgx} кл.${dgx % 2 === 0 ? ` = ${u} ед.` : ''}`;
-        } else if (dgx === 0) {
-          const u = dgy / CELLS_PER_UNIT;
-          label = `${dgy} кл.${dgy % 2 === 0 ? ` = ${u} ед.` : ''}`;
-        } else if (dgx === dgy) {
-          label = `${dgx} диаг. = ${dgx} ед.`;
+        if (adx === 0) {
+          label = `↕ ${ady} кл.${ady % 2 === 0 ? ` = ${ady / 2} ед.` : ''}`;
+        } else if (adx === ady * 2 && dx * dy < 0) {
+          label = `↗ Длина: ${ady} ед.`;
+        } else if (adx === ady * 2 && dx * dy > 0) {
+          label = `↘ Ширина: ${ady} ед.`;
         } else {
-          label = `${dgx}×${dgy} кл.`;
+          label = `${adx}×${ady} кл.`;
         }
         const mx = (sDot.x + cDot.x) / 2;
         const my = (sDot.y + cDot.y) / 2 - 16;

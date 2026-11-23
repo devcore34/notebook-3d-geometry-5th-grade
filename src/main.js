@@ -304,8 +304,8 @@ function renderLeftRail() {
             <span class="item-card-status ${isRev && isTasks ? 'is-done' : ''}">${statusText}</span>
           </div>
           <div class="mini-dims-row">
-            <span class="mini-dim is-l">→ Д: ${item.L}</span>
-            <span class="mini-dim is-w">↗ Ш: ${item.W}</span>
+            <span class="mini-dim is-l">↗ Д: ${item.L}</span>
+            <span class="mini-dim is-w">↘ Ш: ${item.W}</span>
             <span class="mini-dim is-h">↕ В: ${item.H}</span>
           </div>
         </button>
@@ -351,17 +351,17 @@ function renderRightPanel() {
   html += `
     <div class="dim-cards-wrap">
       <div class="dim-cards">
-        <button class="dim-card is-length ${hl === 'length' ? 'is-active' : ''}" data-hl="length" title="Нажми, чтобы подсветить Длину на тетрадном листе">
-          <span class="dim-card-lbl">→ Длина</span>
+        <button class="dim-card is-length ${hl === 'length' ? 'is-active' : ''}" data-hl="length" title="Нажми, чтобы подсветить Длину (↗) на тетрадном листе">
+          <span class="dim-card-lbl">↗ Длина</span>
           <span class="dim-card-val">${item.L} ед.</span>
-          <span class="dim-card-sub">${pluralCells(item.L * 2)}</span>
+          <span class="dim-card-sub">${item.L * 2}→ ${item.L}↑ кл.</span>
         </button>
-        <button class="dim-card is-width ${hl === 'width' ? 'is-active' : ''}" data-hl="width" title="Нажми, чтобы подсветить Ширину на тетрадном листе">
-          <span class="dim-card-lbl">↗ Ширина</span>
+        <button class="dim-card is-width ${hl === 'width' ? 'is-active' : ''}" data-hl="width" title="Нажми, чтобы подсветить Ширину (↘) на тетрадном листе">
+          <span class="dim-card-lbl">↘ Ширина</span>
           <span class="dim-card-val">${item.W} ед.</span>
-          <span class="dim-card-sub">${pluralDiags(item.W)}</span>
+          <span class="dim-card-sub">${item.W * 2}→ ${item.W}↓ кл.</span>
         </button>
-        <button class="dim-card is-height ${hl === 'height' ? 'is-active' : ''}" data-hl="height" title="Нажми, чтобы подсветить Высоту на тетрадном листе">
+        <button class="dim-card is-height ${hl === 'height' ? 'is-active' : ''}" data-hl="height" title="Нажми, чтобы подсветить Высоту (↕) на тетрадном листе">
           <span class="dim-card-lbl">↕ Высота</span>
           <span class="dim-card-val">${item.H} ед.</span>
           <span class="dim-card-sub">${pluralCells(item.H * 2)}</span>
